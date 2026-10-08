@@ -13,8 +13,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-builder.Services.AddScoped<IChatService, ChatService>();
-
 app.UseHttpsRedirection();
 app.UseRouting();
 
