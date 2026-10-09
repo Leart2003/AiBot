@@ -6,7 +6,7 @@ namespace Infrastructure.Services;
 
 public class GeminiService
 {
-    private const string Model = "gemini-2.5-flash";
+    private const string Model = "gemini-flash-latest";
 
     private const string SystemPrompt =
         "You are a study assistant for the university course Grid Computing and Cloud Computing. " +
@@ -37,7 +37,8 @@ public class GeminiService
 
             if (!response.IsSuccessStatusCode)
             {
-                return $"Gemini returned an error ({(int)response.StatusCode}).";
+                var errorBody = await response.Content.ReadAsStringAsync();
+                return $"Gemini returned an error ({(int)response.StatusCode}): {errorBody}";
             }
 
             var json = await response.Content.ReadAsStringAsync();
@@ -65,5 +66,6 @@ public class GeminiService
         {
             return "Could not get an answer from Gemini. Please try again.";
         }
+
     }
 }
