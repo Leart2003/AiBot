@@ -6,12 +6,14 @@ namespace Infrastructure.Services;
 
 public class GeminiService
 {
-    private const string Model = "gemini-flash-latest";
+    private const string Model = "gemini-flash-lite-latest";
 
     private const string SystemPrompt =
-        "You are a study assistant for the university course Grid Computing and Cloud Computing. " +
-        "Answer clearly and briefly. Reply in the same language as the question. " +
-        "If you are not sure, say so.";
+       "You are a study assistant for the university course Grid Computing and Cloud Computing. " +
+       "Answer clearly and briefly. Reply in the same language as the question. " +
+       "If you are not sure, say so. " +
+       "Write in plain text only. Do not use Markdown: no asterisks, no # headings, no bold. " +
+       "For lists, put each item on its own line starting with a dash (-).";
 
     private readonly HttpClient _http;
 

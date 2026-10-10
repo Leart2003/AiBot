@@ -11,54 +11,57 @@
     <button id="send" class="btn btn-primary">Send</button>
 </div>
 
-@section Scripts {
-    <script>
-        const messages = document.getElementById("messages");
-        const input = document.getElementById("question");
-        const button = document.getElementById("send");
+<script>
+    const messages = document.getElementById("messages");
+    const input = document.getElementById("question");
+    const button = document.getElementById("send");
 
-        function addMessage(who, text) {
-            const p = document.createElement("p");
-            const name = document.createElement("strong");
-            name.textContent = who + ": ";
-            p.appendChild(name);
-            p.appendChild(document.createTextNode(text));
-            messages.appendChild(p);
-            messages.scrollTop = messages.scrollHeight;
-        }
+    function addMessage(who, text) {
+        const p = document.createElement("p");
+        const name = document.createElement("strong");
+        name.textContent = who + ": ";
+        const body = document.createElement("span");
+        body.textContent = text;
+        p.appendChild(name);
+        p.appendChild(body);
+        messages.appendChild(p);
+        messages.scrollTop = messages.scrollHeight;
+        return body;
+    }
 
-        async function send() {
-            const question = input.value.trim();
-            if (!question) return;
+    async function send() {
+        const question = input.value.trim();
+        if (!question) return;
 
-            addMessage("You", question);
-            input.value = "";
-            button.disabled = true;
+        addMessage("You", question);
+        input.value = "";
+        button.disabled = true;
+        const reply = addMessage("Bot", "Thinking...");
 
-            try {
-                const response = await fetch("/Chat/Ask", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ question: question })
-                });
+        try {
+            const response = await fetch("/Chat/Ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question: question })
+            });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    addMessage("Bot", data.answer);
-                } else {
-                    addMessage("Error", "Something went wrong (" + response.status + ").");
-                }
-            } catch {
-                addMessage("Error", "Could not reach the server.");
+            if (response.ok) {
+                const data = await response.json();
+                reply.textContent = data.answer;
+            } else {
+                reply.textContent = "Something went wrong (" + response.status + ").";
             }
-
-            button.disabled = false;
-            input.focus();
+        } catch {
+            reply.textContent = "Could not reach the server.";
         }
 
-        button.addEventListener("click", send);
-        input.addEventListener("keydown", function (e) {
-            if (e.key === "Enter") send();
-        });
-    </script>
-}
+        messages.scrollTop = messages.scrollHeight;
+        button.disabled = false;
+        input.focus();
+    }
+
+    button.addEventListener("click", send);
+    input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") send();
+    });
+</script>
