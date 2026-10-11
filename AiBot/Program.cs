@@ -3,42 +3,53 @@ using Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args);
 
-// ---- Everything that starts with builder.Services goes HERE ----
-builder.Services.AddControllersWithViews();
+        var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Services.AddControllersWithViews();
 
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
-{
-    options.Password.RequiredLength = 6;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = false;
-})
-.AddEntityFrameworkStores<ApplicationDbContext>();
+        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+        builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+        {
+            options.Password.RequiredLength = 6;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequireUppercase = false;
+        })
+        .AddEntityFrameworkStores<ApplicationDbContext>();
 
-var app = builder.Build();   
+        builder.Services.AddHttpClient<ChatAiService>(client =>
+        {
+            client.BaseAddress = new Uri(builder.Configuration["Llm:BaseUrl"]
+                ?? throw new InvalidOperationException("Llm:BaseUrl is missing in appsettings.json."));
+            client.Timeout = TimeSpan.FromSeconds(60);
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+                "Bearer",
+                builder.Configuration["Llm:ApiKey"]
+                ?? throw new InvalidOperationException("Llm:ApiKey is missing. Set it with dotnet user-secrets."));
+        });
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+        var app = builder.Build();
 
-app.UseHttpsRedirection();
-app.UseRouting();
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseExceptionHandler("/Home/Error");
+            app.UseHsts();
+        }
 
-app.UseAuthentication();
-app.UseAuthorization();
+        app.UseHttpsRedirection();
+        app.UseRouting();
 
-app.MapStaticAssets();
+        app.UseAuthentication();
+        app.UseAuthorization();
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+        app.MapStaticAssets();
 
-app.Run();
+        app.MapControllerRoute(
+            name: "default",
+            pattern: "{controller=Home}/{action=Index}/{id?}")
+            .WithStaticAssets();
+
+        app.Run();
+    

@@ -14,6 +14,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
 
     public DbSet<CourseDocument> CourseDocuments => Set<CourseDocument>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +38,19 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
         {
             builder.Property(c => c.Text).IsRequired();
             builder.HasIndex(c => new { c.CourseDocumentId, c.ChunkIndex }).IsUnique();
+        });
+
+        modelBuilder.Entity<ChatMessage>(builder =>
+        {
+            builder.Property(m => m.UserId).IsRequired().HasMaxLength(450);
+            builder.Property(m => m.Role).IsRequired().HasMaxLength(20);
+            builder.Property(m => m.Text).IsRequired();
+            builder.HasIndex(m => m.UserId);
+
+            builder.HasOne<IdentityUser>()
+                .WithMany()
+                .HasForeignKey(m => m.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
