@@ -1,6 +1,7 @@
 using Infrastructure.Persistence;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,13 @@ builder.Services.AddHttpClient<ChatAiService>(client =>
 });
 
 var app = builder.Build();
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+{
+    options.Password.RequiredLength = 6;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -34,6 +42,8 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
