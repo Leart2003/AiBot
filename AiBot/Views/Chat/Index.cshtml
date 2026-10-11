@@ -1,15 +1,28 @@
-﻿@{
+﻿@model List<Domain.Entities.ChatMessage>
+@{
     ViewData["Title"] = "AI Assistant";
 }
 
+<style>
+    .msg-text {
+        white-space: pre-wrap;
+    }
+</style>
+
 <h2>Cloud &amp; Grid Computing Assistant</h2>
 
-<div id="messages" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;"></div>
+<div id="messages" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;">
+    @foreach (var message in Model)
+    {
+        <p><strong>@(message.Role == "user" ? "You" : "Bot"): </strong><span class="msg-text">@message.Text</span></p>
+    }
+</div>
 
-<div class="input-group">
+<div class="input-group mb-3">
     <input id="question" type="text" class="form-control" maxlength="1000" placeholder="Ask a question..." />
     <button id="send" class="btn btn-primary">Send</button>
 </div>
 
-<script>
-</script>
+<form asp-action="Clear" method="post" onsubmit="return confirm('Delete all your saved messages?');">
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Clear chat</button>
+</form>
