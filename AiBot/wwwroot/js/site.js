@@ -1,4 +1,53 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
+﻿
+    const messages = document.getElementById("messages");
+    const input = document.getElementById("question");
+    const button = document.getElementById("send");
 
-// Write your JavaScript code.
+    function addMessage(who, text) {
+        const p = document.createElement("p");
+        const name = document.createElement("strong");
+        name.textContent = who + ": ";
+        const body = document.createElement("span");
+        body.textContent = text;
+        p.appendChild(name);
+        p.appendChild(body);
+        messages.appendChild(p);
+        messages.scrollTop = messages.scrollHeight;
+        return body;
+    }
+
+    async function send() {
+        const question = input.value.trim();
+        if (!question) return;
+
+        addMessage("You", question);
+        input.value = "";
+        button.disabled = true;
+        const reply = addMessage("Bot", "Thinking...");
+
+        try {
+            const response = await fetch("/Chat/Ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question: question })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                reply.textContent = data.answer;
+            } else {
+                reply.textContent = "Something went wrong (" + response.status + ").";
+            }
+        } catch {
+            reply.textContent = "Could not reach the server.";
+        }
+
+        messages.scrollTop = messages.scrollHeight;
+        button.disabled = false;
+        input.focus();
+    }
+
+    button.addEventListener("click", send);
+    input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") send();
+    });
