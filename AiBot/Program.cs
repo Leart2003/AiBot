@@ -1,27 +1,16 @@
 using Infrastructure.Persistence;
 using Infrastructure.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ---- Everything that starts with builder.Services goes HERE ----
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddHttpClient<ChatAiService>(client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["Llm:BaseUrl"]
-        ?? throw new InvalidOperationException("Llm:BaseUrl is missing in appsettings.json."));
-    client.Timeout = TimeSpan.FromSeconds(60);
-    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-        "Bearer",
-        builder.Configuration["Llm:ApiKey"]
-        ?? throw new InvalidOperationException("Llm:ApiKey is missing. Set it with dotnet user-secrets."));
-});
-
-var app = builder.Build();
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
     options.Password.RequiredLength = 6;
@@ -29,6 +18,9 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     options.Password.RequireUppercase = false;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>();
+
+
+var app = builder.Build();   
 
 if (!app.Environment.IsDevelopment())
 {
@@ -39,11 +31,10 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
