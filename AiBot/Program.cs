@@ -9,14 +9,15 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
-builder.Services.AddHttpClient<GeminiService>(client =>
+builder.Services.AddHttpClient<ChatAiService>(client =>
 {
-    client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+    client.BaseAddress = new Uri(builder.Configuration["Llm:BaseUrl"]
+        ?? throw new InvalidOperationException("Llm:BaseUrl is missing in appsettings.json."));
     client.Timeout = TimeSpan.FromSeconds(60);
-    client.DefaultRequestHeaders.Add("x-goog-api-key",
-        builder.Configuration["Gemini:ApiKey"]
-        ?? throw new InvalidOperationException("Gemini:ApiKey is missing. Set it with dotnet user-secrets."));
+    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+        "Bearer",
+        builder.Configuration["Llm:ApiKey"]
+        ?? throw new InvalidOperationException("Llm:ApiKey is missing. Set it with dotnet user-secrets."));
 });
 
 var app = builder.Build();

@@ -5,11 +5,11 @@ namespace AiBot.Controllers;
 
 public class ChatController : Controller
 {
-    private readonly GeminiService _gemini;
+    private readonly ChatAiService _chatAi;
 
-    public ChatController(GeminiService gemini)
+    public ChatController(ChatAiService chatAi)
     {
-        _gemini = gemini;
+        _chatAi = chatAi;
     }
 
     public IActionResult Index()
@@ -25,7 +25,7 @@ public class ChatController : Controller
             return BadRequest("Please write a question (max 1000 characters).");
         }
 
-        var answer = await _gemini.AskAsync(request.Question);
+        var answer = await _chatAi.AskAsync(request.Question);
         return Json(new { answer });
     }
 }
