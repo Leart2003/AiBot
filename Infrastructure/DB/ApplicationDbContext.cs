@@ -14,6 +14,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
 
     public DbSet<CourseDocument> CourseDocuments => Set<CourseDocument>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -40,17 +41,29 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             builder.HasIndex(c => new { c.CourseDocumentId, c.ChunkIndex }).IsUnique();
         });
 
-        modelBuilder.Entity<ChatMessage>(builder =>
+        modelBuilder.Entity<Conversation>(builder =>
         {
-            builder.Property(m => m.UserId).IsRequired().HasMaxLength(450);
-            builder.Property(m => m.Role).IsRequired().HasMaxLength(20);
-            builder.Property(m => m.Text).IsRequired();
-            builder.HasIndex(m => m.UserId);
+            builder.Property(c => c.UserId).IsRequired().HasMaxLength(450);
+            builder.Property(c => c.Title).IsRequired().HasMaxLength(100);
+            builder.HasIndex(c => c.UserId);
 
+            // A conversation belongs to a user; deleting the user deletes the conversations.
             builder.HasOne<IdentityUser>()
                 .WithMany()
-                .HasForeignKey(m => m.UserId)
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Deleting a conversation deletes its messages.
+            builder.HasMany(c => c.Messages)
+                .WithOne(m => m.Conversation)
+                .HasForeignKey(m => m.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        modelBuilder.Entity<ChatMessage>(builder =>
+        {
+            builder.Property(m => m.Role).IsRequired().HasMaxLength(20);
+            builder.Property(m => m.Text).IsRequired();
+        });
     }
-}
+}   
