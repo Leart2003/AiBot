@@ -42,7 +42,6 @@ public class ChatController : Controller
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-        // The last 6 messages give the bot some memory of the conversation.
         var recent = await _db.ChatMessages
             .Where(m => m.UserId == userId)
             .OrderByDescending(m => m.Id)

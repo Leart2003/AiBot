@@ -6,8 +6,10 @@ namespace Infrastructure.Services;
 
 public class ChatAiService
 {
-    // Change this to a model name from your provider's model list.
-    private const string Model = "llama-3.3-70b-versatile";
+
+
+    private const string Model = "openai/gpt-oss-120b";
+
 
     private const string SystemPrompt =
         "You are a study assistant for the university course Grid Computing and Cloud Computing. " +
@@ -23,7 +25,7 @@ public class ChatAiService
         _http = http;
     }
 
-    // Returns null if the AI service fails.
+  
     public async Task<string?> AskAsync(string question, IEnumerable<ChatMessage> history)
     {
         var messages = new List<object>
