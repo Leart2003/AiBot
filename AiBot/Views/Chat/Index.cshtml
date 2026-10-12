@@ -1,28 +1,119 @@
-﻿@model List<Domain.Entities.ChatMessage>
-@{
+﻿@model AiBot.Models.ChatPageViewModel
     ViewData["Title"] = "AI Assistant";
 }
 
 <style>
-    .msg-text {
-        white-space: pre-wrap;
-    }
+    .msg-text { white-space: pre-wrap; }
 </style>
 
-<h2>Cloud &amp; Grid Computing Assistant</h2>
+<div class="row">
+    <div class="col-md-3 mb-3">
+        <a href="/Chat" class="btn btn-primary w-100 mb-2">+ New chat</a>
 
-<div id="messages" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;">
-    @foreach (var message in Model)
-    {
-        <p><strong>@(message.Role == "user" ? "You" : "Bot"): </strong><span class="msg-text">@message.Text</span></p>
-    }
+        @if (Model.Conversations.Count == 0)
+        {
+            <p class="text-muted">No chats yet.</p>
+        }
+
+        <div class="list-group">
+            @foreach (var conversation in Model.Conversations)
+            {
+                <a asp-action="Index" asp-route-id="@conversation.Id"
+                   class="list-group-item list-group-item-action @(conversation.Id == Model.CurrentConversationId ? "active" : "")">
+                    @conversation.Title
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <h2>Cloud &amp; Grid Computing Assistant</h2>
+
+        <div id="messages" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;">
+            @foreach (var message in Model.Messages)
+            {
+                <p><strong>@(message.Role == "user" ? "You" : "Bot"): </strong><span class="msg-text">@message.Text</span></p>
+            }
+        </div>
+
+        <div class="input-group mb-3">
+            <input id="question" type="text" class="form-control" maxlength="1000" placeholder="Ask a question..." />
+            <button id="send" class="btn btn-primary">Send</button>
+        </div>
+
+        @if (Model.CurrentConversationId != null)
+        {
+            <form asp-action="DeleteConversation" asp-route-id="@Model.CurrentConversationId" method="post"
+                  onsubmit="return confirm('Delete this chat?');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Delete this chat</button>
+            </form>
+        }
+    </div>
 </div>
 
-<div class="input-group mb-3">
-    <input id="question" type="text" class="form-control" maxlength="1000" placeholder="Ask a question..." />
-    <button id="send" class="btn btn-primary">Send</button>
-</div>
+@section Scripts {
+    <script>
+        const messages = document.getElementById("messages");
+        const input = document.getElementById("question");
+        const button = document.getElementById("send");
+        let conversationId = @(Model.CurrentConversationId?.ToString() ?? "null");
 
-<form asp-action="Clear" method="post" onsubmit="return confirm('Delete all your saved messages?');">
-    <button type="submit" class="btn btn-outline-secondary btn-sm">Clear chat</button>
-</form>
+        messages.scrollTop = messages.scrollHeight;
+
+        function addMessage(who, text) {
+            const p = document.createElement("p");
+            const name = document.createElement("strong");
+            name.textContent = who + ": ";
+            const body = document.createElement("span");
+            body.className = "msg-text";
+            body.textContent = text;
+            p.appendChild(name);
+            p.appendChild(body);
+            messages.appendChild(p);
+            messages.scrollTop = messages.scrollHeight;
+            return body;
+        }
+
+        async function send() {
+            const question = input.value.trim();
+            if (!question) return;
+
+            addMessage("You", question);
+            input.value = "";
+            button.disabled = true;
+            const reply = addMessage("Bot", "Thinking...");
+
+            try {
+                const response = await fetch("/Chat/Ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question: question, conversationId: conversationId })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    reply.textContent = data.answer;
+
+                    // First message of a new chat: open the saved conversation so it appears in the list.
+                    if (conversationId === null && data.conversationId) {
+                        window.location.href = "/Chat/Index/" + data.conversationId;
+                        return;
+                    }
+                } else {
+                    reply.textContent = "Something went wrong (" + response.status + ").";
+                }
+            } catch {
+                reply.textContent = "Could not reach the server.";
+            }
+
+            messages.scrollTop = messages.scrollHeight;
+            button.disabled = false;
+            input.focus();
+        }
+
+        button.addEventListener("click", send);
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") send();
+        });
+    </script>
+}

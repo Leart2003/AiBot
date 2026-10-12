@@ -26,7 +26,6 @@ public class ChatController : Controller
         return User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     }
 
-    // /Chat opens an empty new chat, /Chat/Index/5 opens conversation 5.
     public async Task<IActionResult> Index(int? id)
     {
         var userId = GetUserId();
@@ -40,7 +39,6 @@ public class ChatController : Controller
 
         if (id != null)
         {
-            // Only the owner can open a conversation.
             if (!conversations.Any(c => c.Id == id))
             {
                 return NotFound();
@@ -58,6 +56,8 @@ public class ChatController : Controller
             CurrentConversationId = id,
             Messages = messages
         });
+
+
     }
 
     [HttpPost]
@@ -83,7 +83,6 @@ public class ChatController : Controller
                 return NotFound();
             }
 
-            // The last 6 messages give the bot some memory of this conversation.
             recent = await _db.ChatMessages
                 .Where(m => m.ConversationId == conversation.Id)
                 .OrderByDescending(m => m.Id)
