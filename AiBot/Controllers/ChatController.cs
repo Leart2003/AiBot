@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using AiBot.Models;
 using Domain.Entities;
 using Infrastructure.Persistence;
 using Infrastructure.Services;
@@ -20,16 +21,43 @@ public class ChatController : Controller
         _db = db;
     }
 
-    public async Task<IActionResult> Index()
+    private string GetUserId()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        return User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+    }
 
-        var messages = await _db.ChatMessages
-            .Where(m => m.UserId == userId)
-            .OrderBy(m => m.Id)
+    // /Chat opens an empty new chat, /Chat/Index/5 opens conversation 5.
+    public async Task<IActionResult> Index(int? id)
+    {
+        var userId = GetUserId();
+
+        var conversations = await _db.Conversations
+            .Where(c => c.UserId == userId)
+            .OrderByDescending(c => c.Id)
             .ToListAsync();
 
-        return View(messages);
+        var messages = new List<ChatMessage>();
+
+        if (id != null)
+        {
+            // Only the owner can open a conversation.
+            if (!conversations.Any(c => c.Id == id))
+            {
+                return NotFound();
+            }
+
+            messages = await _db.ChatMessages
+                .Where(m => m.ConversationId == id)
+                .OrderBy(m => m.Id)
+                .ToListAsync();
+        }
+
+        return View(new ChatPageViewModel
+        {
+            Conversations = conversations,
+            CurrentConversationId = id,
+            Messages = messages
+        });
     }
 
     [HttpPost]
@@ -40,53 +68,93 @@ public class ChatController : Controller
             return BadRequest("Please write a question (max 1000 characters).");
         }
 
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var userId = GetUserId();
 
-        var recent = await _db.ChatMessages
-            .Where(m => m.UserId == userId)
-            .OrderByDescending(m => m.Id)
-            .Take(6)
-            .ToListAsync();
-        recent.Reverse();
+        Conversation? conversation = null;
+        var recent = new List<ChatMessage>();
+
+        if (request.ConversationId != null)
+        {
+            conversation = await _db.Conversations
+                .FirstOrDefaultAsync(c => c.Id == request.ConversationId && c.UserId == userId);
+
+            if (conversation == null)
+            {
+                return NotFound();
+            }
+
+            // The last 6 messages give the bot some memory of this conversation.
+            recent = await _db.ChatMessages
+                .Where(m => m.ConversationId == conversation.Id)
+                .OrderByDescending(m => m.Id)
+                .Take(6)
+                .ToListAsync();
+            recent.Reverse();
+        }
 
         var answer = await _chatAi.AskAsync(request.Question, recent);
 
         if (answer == null)
         {
-            return Json(new { answer = "Sorry, I could not get an answer right now. Please try again." });
+            return Json(new
+            {
+                answer = "Sorry, I could not get an answer right now. Please try again.",
+                conversationId = request.ConversationId
+            });
         }
 
-        _db.ChatMessages.Add(new ChatMessage
+        if (conversation == null)
         {
-            UserId = userId,
+            conversation = new Conversation
+            {
+                UserId = userId,
+                Title = MakeTitle(request.Question),
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            _db.Conversations.Add(conversation);
+        }
+
+        conversation.Messages.Add(new ChatMessage
+        {
             Role = "user",
             Text = request.Question,
             CreatedAtUtc = DateTime.UtcNow
         });
-        _db.ChatMessages.Add(new ChatMessage
+        conversation.Messages.Add(new ChatMessage
         {
-            UserId = userId,
             Role = "assistant",
             Text = answer,
             CreatedAtUtc = DateTime.UtcNow
         });
+
         await _db.SaveChangesAsync();
 
-        return Json(new { answer });
+        return Json(new { answer, conversationId = conversation.Id });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Clear()
+    public async Task<IActionResult> DeleteConversation(int id)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var userId = GetUserId();
 
-        await _db.ChatMessages
-            .Where(m => m.UserId == userId)
-            .ExecuteDeleteAsync();
+        var conversation = await _db.Conversations
+            .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
 
-        return RedirectToAction(nameof(Index));
+        if (conversation != null)
+        {
+            _db.Conversations.Remove(conversation);
+            await _db.SaveChangesAsync();
+        }
+
+        return Redirect("/Chat");
+    }
+
+    private static string MakeTitle(string question)
+    {
+        var title = question.Trim();
+        return title.Length <= 40 ? title : title[..40] + "...";
     }
 }
 
-public record AskRequest(string Question);
+public record AskRequest(string Question, int? ConversationId);
