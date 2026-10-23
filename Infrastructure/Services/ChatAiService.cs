@@ -16,7 +16,8 @@ public class ChatAiService
         "Answer clearly and briefly. Reply in the same language as the question. " +
         "If you are not sure, say so. " +
         "Write in plain text only. Do not use Markdown: no asterisks, no # headings, no bold. " +
-        "For lists, put each item on its own line starting with a dash (-).";
+        "For lists, put each item on its own line starting with a dash (-)." +
+        "lectures in cloud computing are held during thursdays art 18:00 o clock";
 
     private readonly HttpClient _http;
 
@@ -45,13 +46,16 @@ public class ChatAiService
         try
         {
             using var response = await _http.PostAsJsonAsync("chat/completions", body);
-
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"AI service error {(int)response.StatusCode}: {errorBody}");
+
+                Console.WriteLine(
+                    $"AI service error {(int)response.StatusCode}: {errorBody}");
+
                 return null;
             }
+
 
             var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
